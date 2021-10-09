@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <title>作业三</title>
+    <script type='text/javascript' src='../Resources/lib/d3.js'></script>
+</head>
+
+<body>
+    <svg width='1200px' height='800px'></svg>
+    <script type='text/javascript'>
+        const svg = d3.select('svg')
+        const margin = { top: 100, left: 200 }
+        const barHeight = 600
+        const duration = 800
+        const maxValue = 35000000
+        const maxValuey=600000
+        const dataset = new Array()
+       
+        d3.csv('../Resources/data/covid19.csv').then(async function (data) {
+            dataProcess(data) 
+            initRender()
+            console.log(dataset)
+            for (let i = 0; i < dataset.length; i++) {
+                if (i == 0) {
+                    await updateRender(dataset[i], dataset[i])
+                } else {
+                    await updateRender(dataset[i - 1], dataset[i])
+                }
+            }
+        })
+     // 处理数据 二维数组
+     function dataProcess(data){
+            let res=[]
+            data.forEach(row => {//数组遍历
+                const { confirmed, country, date, death, recovered } = row//解构赋值
+                const obj = {}
+                obj.date = date//生成日期对象
+                obj.date = new Date(date).getFullYear() +"." +(new Date(date).getMonth()+1)
+                obj.country = country
+                obj.confirmed = +confirmed//转换为数值
+                obj.recovered = +recovered
+                obj.death = +death
+                res.push(obj)
+            })
+        let len = res.length //将相同年的对象分在一个数组一起变换
+            let n = 10
+            let lineNum = len % 10 === 0 ? len / 10 : Math.floor((len / 10) + 1)
+            for (let k = 0; k < lineNum; k++) {
+                let temp = res.slice(k * n, k * n + n);
+                dataset.push(JSON.parse(JSON.stringify(temp)));
+            }
+        }
+
+        //初始化坐标轴
+        function initRender() {
+            //定义一个g元素，把所有绘图内容都放在g里面，形成一个整体，做图形变换的时候以一个整体变换
+            const g = svg.append('g').attr('id', 'maingroup').attr('transform', `translate(${margin.left}, ${margin.top})`)
+            const xScale = d3.scaleLinear([0, maxValue], [0, 900]).nice()//刻度优化
+            const yScale = d3.scaleLinear([0,maxValuey],[barHeight,0]).nice()
+
+            //定义坐标轴
+            const xAxis = d3.axisBottom(xScale).ticks(5).tickSize(-600,0).tickFormat(d3.format("~s"))//X轴
+            const yAxis = d3.axisLeft(yScale).ticks(5).tickSize(-900,0).tickFormat(d3.format("~s"))//Y轴
+            //ticksize 绘制网格线
+            //绘制坐标轴
+            const g_xAxis = g.append('g').attr('id', 'xAxis') .call(xAxis).attr('transform', `translate(0, ${barHeight})`)
+            g_xAxis.select('path').attr('stroke')//不绘制坐标轴的线条
+            const g_yAxis = g.append('g').attr('id', 'yAxis').call(yAxis)//y轴作为一个组
+            g_yAxis.select('path').attr('stroke')//不绘制坐标轴的线条
+
+            d3.selectAll('.tick text').attr('font-size', '16px')
+            d3.selectAll('g  .tick ').attr('opacity','0.4') //opacity让网格线透明度变低
+            // d3.selectAll('g  .tick ').attr('background-color','rgba(229,229,229, 0.5)')
+            //  d3.selectAll(' g >.tick>text').attr('background','rgba(0,0,0,1)')
+            //y轴death标签
+            const updateTick = d3.select('#yAxis').append("text")
+            .attr("transform", "translate(-50,300) rotate(-90)")
+            .style("text-anchor", "middle")
+            .style('font-size', '24px')
+            .attr('fill', 'black')
+            .text("Death")
+            //x轴Rcovered轴标签
+             d3.select('#xAxis').append("text")
+            .attr("transform", "translate(450,50)")
+            .style("text-anchor", "middle")
+            .style('font-size', '24px')
+            .attr('fill', 'black')
+            .text("Recovered")
+        }
+
+        //更新动画
+        const updateRender = async function (prevData, currData) {
+            const updateGroup = d3.select('#maingroup')
+            const updateXscale = d3.scaleLinear([0, maxValue], [0, 900]).nice()
+            const updateYscale =  d3.scaleLinear([0,maxValuey],[barHeight,0]).nice()
+            const transition = d3.transition().duration(duration).ease(d3.easeLinear)
+            // 圆形
+            const updateCircle = updateGroup.selectAll('circle').data(currData)
+            const enterCircle = updateCircle.enter()
+                .append('circle')
+                .attr('cx', (d,i)=>updateXscale(d.recovered))
+                .attr('cy',(d,i)=> updateYscale(d.death))
+                .attr('r', (d,i) => updateXscale(d.confirmed/10))
+                .attr('fill', (d, i) => d3.schemeCategory10[i])
+                updateCircle.merge(enterCircle).transition(transition)
+                .attr('cx', (d,i)=>updateXscale(d.recovered))
+                .attr('cy',(d,i)=> updateYscale(d.death))
+                .attr('r', (d,i) => updateXscale(d.confirmed/10))
+            //圆上的文字    
+            const updateCircleText = updateGroup.selectAll('#circletext').data(currData)
+            const enterCircleText = updateCircleText.enter()
+                .append('text')
+                .attr('id', 'circletext')
+                .attr('x', d => updateXscale(d.recovered))
+                .attr('y', d => updateYscale(d.death))
+            const mergeCircleText = updateCircleText.merge(enterCircleText).transition(transition)
+                .attr('x', d => updateXscale(d.recovered))
+                .attr('y', d => updateYscale(d.death))
+                .text(d => d.country)
+              
+            //渐变文本 年月变化
+            const updateText = d3.select('#maingroup').selectAll('#datatext').data(currData)
+            const enterText = updateText.enter()
+                .append('text')
+                .attr('id', 'datatext')
+                .attr('x', 300)
+                .attr('y',300)
+                .style('font-size', '64px')
+                .attr('fill', 'grey')
+            const mergeText = updateText.merge(enterText).transition(transition)
+                .text(d => d.date)
+            await transition.end()
+        }
+    </script>
+</body>
+
+</html>

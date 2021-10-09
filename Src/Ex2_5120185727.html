@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验二</title>
+    <script type='text/javascript' src='../Resources/lib/d3.js'></script>
+</head>
+
+<body>
+    <svg width='1200' height='800' style="border: 1px solid red;"></svg>
+    <script type='text/javascript'>
+        //promise异步回调，then第一个参数是成功返回，第二个参数是失败的返回
+        d3.csv('../Resources/data/nation.csv').then(data => { //promise 异步执行 then方法获得数据，promise对象有两种返回结果 成功与失败
+            console.log('加载成功！')
+            // console.log(data) // 输出数据 加载出来的是json对象数组
+            // console.log(typeof data)  //object
+            let arr = []
+            let obj = {}
+            for (let i = 0; i < data.length; i++) {
+                for (let j = 1; j < 6; j++) {
+                    obj = {
+                        "year": parseInt(Object.values(data[i])[0]),
+                        "nation": Object.keys(data[i])[j],
+                        "value": parseInt(Object.values(data[i])[j])
+                    }
+                    // console.log(obj) //obj是对象 拥有三个属性nation、value、year
+                    arr.push(obj)
+                }
+                // data.push(arr)
+            }
+            // console.log(arr) //长度为105的对象数组
+            //以下是把arr分成5个一组的数组再push到res中
+            let len = arr.length
+            let n = 5
+            let lineNum = len % 5 === 0 ? len / 5 : Math.floor((len / 5) + 1)
+            let res = []
+            for (let k = 0; k < lineNum; k++) {
+                let temp = arr.slice(k * n, k * n + n);
+                res.push(JSON.parse(JSON.stringify(temp)));
+            }
+            console.log("二维数组res：")
+            console.log(res) //输出二维数组
+            // console.log(res[0][0].value)
+            // let dataset = []
+            // for (let i = 4; i >= 0; i--) {
+            //     dataset.push(parseInt((res[0][i].value) / 20))
+            // }
+            // console.log(dataset) //数组
+            //添加矩形
+            console.log('二维数组的第一个元素，第一个一维数组res[0]:')
+            console.log(res[0])
+
+            d3.select('svg')
+                .selectAll('rect')
+                .data(res[0].reverse())
+                .enter()
+                .append('rect') //加载数据，生成占位元素
+                .attr('width', function (d) {
+                    return d.value / 20;
+                })
+                .attr('height', 20)
+                .attr('x', 20)
+                .attr('y', (d, i) => 150 - i * 22)
+                .attr('fill', (d, i) => d3.schemeCategory10[i])
+
+            //添加文字
+            d3.select('svg')
+                .selectAll('text')
+                .data(res[0])
+                .enter()
+                .append('text')
+                .text(d =>
+                    d.nation + ':' + d.value
+                )
+                .attr('y', (d, i) => 150 - i * 22 + 15)
+                .attr('x', function (d) {
+                    return d.value / 20 + 22;
+                })
+                .attr('fill', (d, i) => d3.schemeCategory10[i])
+        }, error => {
+            console.log('加载出错！')
+            console.log(error) // 输出错误消息
+        })
+    </script>
+</body>
+
+</html>
