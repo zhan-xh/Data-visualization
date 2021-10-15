@@ -13,7 +13,7 @@
         const svg = d3.select('svg')
         const margin = { top: 100, left: 200 }
         const barHeight = 600
-        const duration = 800
+        const duration = 100
         const maxValue = 35000000
         const maxValuey=600000
         const dataset = new Array()
@@ -98,16 +98,35 @@
             const transition = d3.transition().duration(duration).ease(d3.easeLinear)
             // 圆形
             const updateCircle = updateGroup.selectAll('circle').data(currData)
+
+            const tooltip = d3.select('body') //提供提示信息
+			.append('div')
+			.style('position', 'absolute')
+			.style('z-index', '10')
+			.style('color', 'darkorange')
+			.style('visibility', 'hidden') // 一开始设置为不可见
+			.style('text-anchor', 'middle')
+			.style('font-size', '2em')
+			.text('')
+
             const enterCircle = updateCircle.enter()
                 .append('circle')
                 .attr('cx', (d,i)=>updateXscale(d.recovered))
                 .attr('cy',(d,i)=> updateYscale(d.death))
                 .attr('r', (d,i) => updateXscale(d.confirmed/10))
                 .attr('fill', (d, i) => d3.schemeCategory10[i])
+                .on('mousemove', (event, selectedObj) => { //鼠标移动事件 mousemove检查移动事件 mouseenter只检测进入事件
+				tooltip.style('visibility', 'visible')
+					.style('left', `${d3.pointer(event)[0] + margin.left + 30 + 'px'}`)
+					.style('top', `${d3.pointer(event)[1] + margin.top + 'px'}`)
+					.text(`recover:${selectedObj.recovered},death:${selectedObj.death}`)
+			}).on('mouseout', () => tooltip.style('visibility', 'hidden'))
                 updateCircle.merge(enterCircle).transition(transition)
                 .attr('cx', (d,i)=>updateXscale(d.recovered))
                 .attr('cy',(d,i)=> updateYscale(d.death))
                 .attr('r', (d,i) => updateXscale(d.confirmed/10))
+               
+
             //圆上的文字    
             const updateCircleText = updateGroup.selectAll('#circletext').data(currData)
             const enterCircleText = updateCircleText.enter()
@@ -119,16 +138,20 @@
                 .attr('x', d => updateXscale(d.recovered))
                 .attr('y', d => updateYscale(d.death))
                 .text(d => d.country)
-              
+            
+                
+
+		
+
             //渐变文本 年月变化
             const updateText = d3.select('#maingroup').selectAll('#datatext').data(currData)
             const enterText = updateText.enter()
                 .append('text')
                 .attr('id', 'datatext')
-                .attr('x', 300)
-                .attr('y',300)
-                .style('font-size', '64px')
-                .attr('fill', 'grey')
+                .attr('x', 250)
+                .attr('y',330)
+                .style('font-size', '128px')
+                .attr('fill', 'rgb(225,228,230)')
             const mergeText = updateText.merge(enterText).transition(transition)
                 .text(d => d.date)
             await transition.end()
